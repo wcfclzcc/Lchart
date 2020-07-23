@@ -160,7 +160,7 @@
     }
 
     function Data_processing(height,width) {
-        var k=5;
+
 
         this.x_transform=function (len,pos) {//index转换为pos
 
@@ -170,9 +170,10 @@
 
             return Math.round(pos*(len-1)/width);
         }
-        this.data_handel=function (dat)//数据初步处理,主要是放大作用
+        this.data_handel=function (dat,coo_set,index)//数据初步处理,主要是pos与y轴的转换作用
         {
-            var da=height/2-k*dat;
+            //console.log(height/(coo_set.y_max[index]-coo_set.y_min[index]))
+            var da=height-(dat-coo_set.y_min[0])*height/(coo_set.y_max[0]-coo_set.y_min[0]);
             return da;
         }
 
@@ -212,7 +213,7 @@
 
                     for (let i = 1; i < data.length; i++) {
 
-                        draw.drawLine(ctx, data_processing.x_transform(data.length, i - 1), data_processing.data_handel(data[i - 1]), data_processing.x_transform(data.length, i), data_processing.data_handel(data[i]), color, thick);
+                        draw.drawLine(ctx, data_processing.x_transform(data.length, i - 1), data_processing.data_handel(data[i - 1],set.coo_set,index), data_processing.x_transform(data.length, i), data_processing.data_handel(data[i],set.coo_set,index), color, thick);
 
                     }
 
@@ -220,8 +221,8 @@
                     {
                         for(let i=0;i<data.length;i++)
                         {
-                            draw.drawc(ctx,data_processing.x_transform(data.length,i),data_processing.data_handel(data[i]),"#fff",4);
-                            draw.drawc(ctx,data_processing.x_transform(data.length,i),data_processing.data_handel(data[i]),"#2db7f5",3);
+                            draw.drawc(ctx,data_processing.x_transform(data.length,i),data_processing.data_handel(data[i],set.coo_set,index),"#fff",4);
+                            draw.drawc(ctx,data_processing.x_transform(data.length,i),data_processing.data_handel(data[i],set.coo_set,index),"#2db7f5",3);
                         }
 
                     }
@@ -249,13 +250,13 @@
                 ctx.fillStyle=coo_set.y_color[index];
                 let jg=Math.round(height/coo_set.y_ms[index]);
                 let k=1;
-                let jg_nums=coo_set.y_max[index]/coo_set.y_ms[index];
+                let jg_nums=(coo_set.y_max[index]-coo_set.y_min[index])/coo_set.y_ms[index];
                 //console.log(coo_set);
                 for(let i=jg;i<height;i+=jg)
                 {
-                    draw.drawLine(ctx,0,i,10,i,"#333",3);//坐标点
-                    draw.drawLine(ctx,0,i,width,i,"#5cadff",0.6);//辅助线
-                    ctx.fillText(k*jg_nums,5,height-i-5);
+                    draw.drawLine(ctx,0,i,10,i,coo_set.y_color[index],3);//坐标点
+                    draw.drawLine(ctx,0,i,width,i,coo_set.y_color[index],0.3);//辅助线
+                    ctx.fillText(k*jg_nums+coo_set.y_min[index],5,height-i-5);
                     k++;
 
                 }
@@ -285,8 +286,8 @@
 
                 for(let i=jg;i<width;i+=jg)
                 {
-                    draw.drawLine(ctx,i,height-10,i,height,"#333",3);
-                    draw.drawLine(ctx,i,0,i,height,"#5cadff",0.6);
+                    draw.drawLine(ctx,i,height-10,i,height,coo_set.x_color[index],3);
+                    draw.drawLine(ctx,i,0,i,height,coo_set.x_color[index],0.3);
                     ctx.fillText(date[data_processing.x_transform_back(length,i)],i+5,height-5);
                     k++;
                 }
@@ -394,10 +395,10 @@
             canvas.style.top =mouse.mouse_y+c.offsetTop+40 + "px";
         }
 
-        function draw_circle_line(data,line_set) {
+        function draw_circle_line(data,set) {
 
 
-
+            let line_set=set.line_set;
             var display_nums=0;
             for(let i=0;i<line_set.is_display.length;i++)
             {
@@ -414,8 +415,8 @@
                 let ind=0;
                 for (let key in data) {
                     if(line_set.is_display[ind]) {
-                        draw.drawc(ctx, pos, data_processing.data_handel(data[key][index]), "#fff", 4);
-                        draw.drawc(ctx, pos, data_processing.data_handel(data[key][index]), "#2db7f5", 3);
+                        draw.drawc(ctx, pos, data_processing.data_handel(data[key][index],set.coo_set,index), "#fff", 4);
+                        draw.drawc(ctx, pos, data_processing.data_handel(data[key][index],set.coo_set,index), "#2db7f5", 3);
                     }
                     ind++;
                 }
@@ -429,7 +430,7 @@
             {
                 canvas.style.display="block";
                 detial_text(data,date,set);
-                draw_circle_line(data,set.line_set);
+                draw_circle_line(data,set);
             }
             else{
                 canvas.style.display="none";
@@ -636,7 +637,7 @@
 
         }
 
-        this.coo_set=function (x_nums,x_pos,x_ms,x_color,x_max,y_nums,y_pos,y_max,y_ms,y_color) {
+        this.coo_set=function (x_nums,x_pos,x_ms,x_color,x_max,y_nums,y_pos,y_max,y_ms,y_color,y_min) {
 
             var coo_set=new Object();
             coo_set.x_nums=x_nums;
@@ -649,6 +650,7 @@
             coo_set.y_ms=y_ms;
             coo_set.y_color=y_color;
             coo_set.x_max=x_max;
+            coo_set.y_min=y_min;
 
             return coo_set;
 
@@ -716,8 +718,9 @@
             let x_ms=[Math.round(width/180)];
             let y_ms=[10];
             let x_max=[date[date.length-1]];
-            let y_max=[100];
-            that.set.coo_set=setobj.coo_set(1,x_pos,x_ms,x_color,x_max, 1,y_pos ,y_max,y_ms,y_color);
+            let y_max=[30];
+            let y_min=[-30];
+            that.set.coo_set=setobj.coo_set(1,x_pos,x_ms,x_color,x_max, 1,y_pos ,y_max,y_ms,y_color,y_min);
         }
         init();
 
