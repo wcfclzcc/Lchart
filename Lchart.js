@@ -1,7 +1,12 @@
 
 
+
+    var tt=document.getElementById("test");
+    var tt1=document.getElementById("test1");
+
     function Mouse_event(ctx_id) {//该对象只能实例化一次，否则会出错
 
+        //var zoom=new Mouse_zoom(ctx_id,height,width,data,mouse)
         c=document.getElementById(ctx_id);
         this.isin=0;
         this.mouse_x=0;
@@ -170,12 +175,22 @@
 
             return Math.round(pos*(len-1)/width);
         }
+        this.y_transform=function (max_min,pos) {//num转换为pos
+
+            return Math.round(height-pos*height/max_min);
+        }
+        this.y_transform_back=function (max_min,pos) {//pos转换为num
+
+            return (height*max_min- pos*max_min)/height;
+        }
         this.data_handel=function (dat,coo_set,index)//数据初步处理,主要是pos与y轴的转换作用
         {
             //console.log(height/(coo_set.y_max[index]-coo_set.y_min[index]))
             var da=height-(dat-coo_set.y_min[0])*height/(coo_set.y_max[0]-coo_set.y_min[0]);
             return da;
         }
+        
+        
 
         this.data_off=function (data)//数据舍去
         {
@@ -193,6 +208,23 @@
             }
 
         }
+
+
+        this.zoom_data=function (data,coo_set) {
+            let dat=new Object();
+            for(let key  in data){
+                //console.log(display_data[key])
+                dat[key]=data[key].slice(coo_set.x_min_index,coo_set.x_max_index);
+            }
+            return dat;
+        }
+        this.zoom_date=function (date,coo_set) {
+
+            let dat=date.slice(coo_set.x_min_index,coo_set.x_max_index);
+            return dat;
+
+        }
+
 
     }
 
@@ -335,6 +367,7 @@
         canvas.setAttribute("height",hei);
         canvas.setAttribute("width",wid);
         canvas.style.backgroundColor="rgba(20, 20, 20,0.5)";
+        canvas.style['box-shadow']= "0px 0px 1px 1px #fff, 0px 0px 10px 8px rgb(200, 200, 200)";
         //position: absolute;left: 0px;top: 0px;display: none;
         var parentNode = c.parentNode;
         parentNode.appendChild(canvas);
@@ -466,18 +499,9 @@
             return 1/x;
         }
         var select=0;
-        var select_mode=0;
 
-        function select_data(data,left,right) {
-            let dat=new Object();
-            for(let key  in data){
-                //console.log(display_data[key])
-                dat[key]=data[key].slice(left,right+1);
-            }
-            return dat
-        }
 
-        function mouse_select() {
+        function mouse_select_x(coo_set) {
 
             if(mouse.isdowm==1)
             {
@@ -490,17 +514,21 @@
                 if(mouse.isdowm==0)
                 {
                     select=0;
-                    let len=change_right-change_left;
+                    let len=coo_set.x_max_index-coo_set.x_min_index;
+
                     //draw.drawreact(ctx,mouse.mouse_x_static0,mouse.mouse_y_static0,mouse.mouse_x,mouse.mouse_y,"#888",2);
-                    change_left=data_processing.x_transform_back(len,mouse.mouse_x_static0);
-                    change_right=data_processing.x_transform_back(len,mouse.mouse_x_static1);
+
+                    coo_set.x_max_index=coo_set.x_min_index+data_processing.x_transform_back(len,mouse.mouse_x_static1);//顺序不可以改变
+                    coo_set.x_min_index=coo_set.x_min_index+data_processing.x_transform_back(len,mouse.mouse_x_static0);
+
 
 
                 }
             }
+
         }
 
-        function mouse_wheel() {
+        function mouse_wheel_x(coo_set) {
             if(mouse.zoom_times==0)//没有缩放
             {
                 //console.log("sss");
@@ -547,50 +575,156 @@
                 }
                 mouse.wheel_dirc=0;
 
-
+                coo_set.x_min_index=change_left;
+                coo_set.x_max_index=change_right;
 
                 //return(select_data(dat,change_left,change_right));
             }
         }
 
-        this.zoom_data_process=function (dat) {//缩放的数据处理
+        function mouse_select_y(coo_set) {
 
-            //console.log(mouse.isdowm);
-            data_length=data[Object.keys(dat)[0]].length;
-
-            step=(data_length-10)/all;
-
-            if(select_mode==0)
+            if(mouse.isdowm==1)
             {
-                mouse_wheel(dat);
+                select=1;
             }
-            else if(select_mode==1)
+            if(select==1)
             {
-                mouse_select(dat);
+                draw.drawreact(ctx,mouse.mouse_x_static0,mouse.mouse_y_static0,mouse.mouse_x,mouse.mouse_y,"#888",2);
+
+                if(mouse.isdowm==0)
+                {
+                    select=0;
+                    let len=coo_set.y_max[0]-coo_set.y_min[0];
+
+                    //draw.drawreact(ctx,mouse.mouse_x_static0,mouse.mouse_y_static0,mouse.mouse_x,mouse.mouse_y,"#888",2);
+                    coo_set.y_max[0]=coo_set.y_min[0]+data_processing.y_transform_back(len,mouse.mouse_y_static0);
+                    coo_set.y_min[0]=coo_set.y_min[0]+data_processing.y_transform_back(len,mouse.mouse_y_static1);
+
+
+
+                }
             }
-            return  select_data(dat,change_left,change_right);
 
         }
 
-        this.zoom_date_process=function (dat) {//缩放的数据处理
+        function mouse_wheel_y(coo_set) {
+            if(mouse.zoom_times==0)//没有缩放
+            {
+                //console.log("sss");
+                //console.log(dat.data1.length);
+                change_right=data_length;
+                change_left=0;
 
-            //console.log(mouse.isdowm);
-            data_length=dat.length;
+                //return select_data(dat,change_left,change_right);
+            }
+            else{
+
+
+                if(mouse.wheel_dirc==1)//放大
+                {
+                    if(coo_set.y_max[0]>coo_set.y_min[0])
+                    {
+                        coo_set.y_max[0]-= 0.5*mouse.mouse_y*coo_set.y_max[0]/height;
+                        coo_set.y_min[0]-=(0.5*coo_set.y_min[0]*(height-mouse.mouse_y))/height;
+                        console.log(coo_set.y_max[0]+",,"+coo_set.y_min[0]);
+                    }
+
+
+
+
+                }
+                else if(mouse.wheel_dirc==2)//缩小
+                {
+
+
+                    if(coo_set.y_max[0]>coo_set.y_min[0])
+                    {
+                        coo_set.y_max[0]-= 0.5*mouse.mouse_y*coo_set.y_max[0]/height;
+                        coo_set.y_min[0]-=(0.5*coo_set.y_min[0]*(height-mouse.mouse_y))/height;
+                        console.log(coo_set.y_max[0]+",,"+coo_set.y_min[0]);
+                    }
+                }
+                mouse.wheel_dirc=0;
+
+                coo_set.x_min_index=change_left;
+                coo_set.x_max_index=change_right;
+
+                //return(select_data(dat,change_left,change_right));
+            }
+        }
+
+        function mouse_select_x_y(coo_set) {
+
+            if(mouse.isdowm==1)
+            {
+                select=1;
+            }
+            if(select==1)
+            {
+                draw.drawreact(ctx,mouse.mouse_x_static0,mouse.mouse_y_static0,mouse.mouse_x,mouse.mouse_y,"#888",2);
+
+                if(mouse.isdowm==0)
+                {
+                    select=0;
+                    let len=coo_set.y_max[0]-coo_set.y_min[0];
+                    coo_set.y_max[0]=coo_set.y_min[0]+data_processing.y_transform_back(len,mouse.mouse_y_static0);
+                    coo_set.y_min[0]=coo_set.y_min[0]+data_processing.y_transform_back(len,mouse.mouse_y_static1);
+
+                    len=coo_set.x_max_index-coo_set.x_min_index;
+                    coo_set.x_max_index=coo_set.x_min_index+data_processing.x_transform_back(len,mouse.mouse_x_static1);//顺序不可以改变
+                    coo_set.x_min_index=coo_set.x_min_index+data_processing.x_transform_back(len,mouse.mouse_x_static0);
+
+
+
+                }
+            }
+
+        }
+
+        this.zoom_data_process=function (data_length,set) {//缩放的数据处理
+
             step=(data_length-10)/all;
-
-            if(select_mode==0)
+            if(set.zoom_set.target==1)
             {
-                mouse_wheel(dat);
+                if(set.zoom_set.mode==1)
+                {
+                    mouse_wheel_x(set.coo_set);
+                }
+                else if(set.zoom_set.mode==2)
+                {
+                    mouse_select_x(set.coo_set);
+                }
             }
-            else if(select_mode==1)
+            else if(set.zoom_set.target==2)
             {
-                mouse_select(dat);
+
+                if(set.zoom_set.mode==1)
+                {
+                    mouse_wheel_y(set.coo_set);
+                }
+                else if(set.zoom_set.mode==2)
+                {
+                    mouse_select_y(set.coo_set);
+                }
+            }
+            else if(set.zoom_set.target==3)
+            {
+
+                if(set.zoom_set.mode==1)
+                {
+                    mouse_wheel_y(set.coo_set);
+                }
+                else if(set.zoom_set.mode==2)
+                {
+                    mouse_select_x_y(set.coo_set);
+                }
             }
 
-            return dat.slice(change_left,change_right+1);
 
 
         }
+
 
     }
 
@@ -637,7 +771,7 @@
 
         }
 
-        this.coo_set=function (x_nums,x_pos,x_ms,x_color,x_max,y_nums,y_pos,y_max,y_ms,y_color,y_min) {
+        this.coo_set=function (x_nums,x_pos,x_ms,x_color,x_max_index,x_min_index,y_nums,y_pos,y_max,y_ms,y_color,y_min) {
 
             var coo_set=new Object();
             coo_set.x_nums=x_nums;
@@ -649,12 +783,14 @@
             coo_set.y_max=y_max;
             coo_set.y_ms=y_ms;
             coo_set.y_color=y_color;
-            coo_set.x_max=x_max;
+            coo_set.x_max_index=x_max_index;
+            coo_set.x_min_index=x_min_index;
             coo_set.y_min=y_min;
 
             return coo_set;
 
         }
+
     }
 
 
@@ -687,6 +823,7 @@
 
         var zoom=new Mouse_zoom(ctx_id,height,width,display_data,mouse);
 
+        var data_processing=new Data_processing(height,width);
         var setobj=new Set();
 
         var that=this;
@@ -710,19 +847,22 @@
 
             that.set.detail_set=setobj.detail_set("#555","#999",0.4,20,true);
 
-            that.set.zoom_set=setobj.zoom_set(1,1);
+            that.set.zoom_set=setobj.zoom_set(1,2);
             let y_pos=[1];
             let x_pos=[1];
             let x_color=["#222"];
             let y_color=["#222"];
             let x_ms=[Math.round(width/180)];
             let y_ms=[10];
-            let x_max=[date[date.length-1]];
+            let x_max_index=date.length-1;
+            let x_min_index=0;
             let y_max=[30];
             let y_min=[-30];
-            that.set.coo_set=setobj.coo_set(1,x_pos,x_ms,x_color,x_max, 1,y_pos ,y_max,y_ms,y_color,y_min);
+            that.set.coo_set=setobj.coo_set(1,x_pos,x_ms,x_color,x_max_index,x_min_index, 1,y_pos ,y_max,y_ms,y_color,y_min);
         }
         init();
+
+
 
         this.display= function update()//实时更新
         {
@@ -732,9 +872,16 @@
             ctx.clearRect(0, 0, width, height); //清空所有的内容
 
 
+            zoom.zoom_data_process(that.data.date.length,set0);//数据缩放，只需要改变coo_set对象即可
+
+            display_data_change=data_processing.zoom_data(that.data.display_data,set0.coo_set);//根据coo_set修改数据
+
+
+            change_date=data_processing.zoom_date(that.data.date,set0.coo_set);
+
             //console.log(this.data.display_data.data1.length);
-            display_data_change=zoom.zoom_data_process(this.data.display_data);
-            change_date=zoom.zoom_date_process(this.data.date);
+            //display_data_change=zoom.zoom_data_process(this.data.display_data);
+            //change_date=zoom.zoom_date_process(this.data.date);
 
 
             draw_all.draw_data_all(ctx,display_data_change,set0);//曲线部分
